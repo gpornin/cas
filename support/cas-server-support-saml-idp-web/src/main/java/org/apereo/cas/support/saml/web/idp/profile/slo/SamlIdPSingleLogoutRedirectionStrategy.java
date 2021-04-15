@@ -18,6 +18,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import net.shibboleth.utilities.java.support.xml.SerializeSupport;
+
+import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.opensaml.core.xml.util.XMLObjectSupport;
 import org.opensaml.saml.common.xml.SAMLConstants;
@@ -154,12 +157,14 @@ public class SamlIdPSingleLogoutRedirectionStrategy implements LogoutRedirection
             ? sloService.getLocation()
             : sloService.getResponseLocation();
         LOGGER.trace("Encoding logout response given endpoint [{}] for binding [{}]", location, sloService.getBinding());
-        val encoder = new SamlIdPHttpRedirectDeflateEncoder(location, logoutResponse);
+        
+        val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
+        val relayState = request.getParameter("RelayState");
+        val encoder = new SamlIdPHttpRedirectDeflateEncoder(location, logoutResponse, relayState);
         encoder.doEncode();
         val redirectUrl = encoder.getRedirectUrl();
         LOGGER.debug("Final logout redirect URL is [{}]", redirectUrl);
 
-        val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
         WebUtils.putLogoutRedirectUrl(request, redirectUrl);
     }
 
@@ -178,6 +183,14 @@ public class SamlIdPSingleLogoutRedirectionStrategy implements LogoutRedirection
 
         val message = EncodingUtils.encodeBase64(payload);
         LOGGER.trace("Logout message encoded in base64 is [{}]", message);
+        Map<String,Object> requestParams = CollectionUtils.wrap(SamlProtocolConstants.PARAMETER_SAML_RESPONSE, message);
+
+        val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(requestContext);
+        val relayState = request.getParameter("RelayState");
+        if(StringUtils.isNotBlank(relayState)) {
+        	LOGGER.trace("Logout Relay-State to send back to the requester is [{}]", relayState);
+        	requestParams.put(SamlProtocolConstants.PARAMETER_SAML_RELAY_STATE, relayState);
+        }
 
         val location = StringUtils.isBlank(sloService.getResponseLocation())
             ? sloService.getLocation()
@@ -187,7 +200,7 @@ public class SamlIdPSingleLogoutRedirectionStrategy implements LogoutRedirection
         val exec = HttpUtils.HttpExecutionRequest.builder()
             .method(HttpMethod.POST)
             .url(location)
-            .parameters(CollectionUtils.wrap(SamlProtocolConstants.PARAMETER_SAML_RESPONSE, message))
+            .parameters(requestParams)
             .headers(CollectionUtils.wrap("Content-Type", MediaType.APPLICATION_XML_VALUE))
             .build();
         HttpUtils.execute(exec);

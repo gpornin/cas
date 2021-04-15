@@ -7,6 +7,7 @@ import lombok.val;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.messaging.encoder.MessageEncodingException;
 import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.SAMLBindingSupport;
 import org.opensaml.saml.saml2.binding.encoding.impl.HTTPRedirectDeflateEncoder;
 import org.opensaml.xmlsec.SignatureSigningParameters;
 import org.opensaml.xmlsec.context.SecurityParametersContext;
@@ -27,6 +28,8 @@ public class SamlIdPHttpRedirectDeflateEncoder extends HTTPRedirectDeflateEncode
     private final String endpointUrl;
 
     private final SignableXMLObject request;
+
+    private final String relayState;
 
     private String redirectUrl;
 
@@ -51,6 +54,8 @@ public class SamlIdPHttpRedirectDeflateEncoder extends HTTPRedirectDeflateEncode
         removeSignature(samlObject);
         encodedRequest = deflateAndBase64Encode(samlObject);
         messageContext.setMessage(request);
+        
+        SAMLBindingSupport.setRelayState(messageContext, relayState);
 
         this.redirectUrl = buildRedirectURL(messageContext, endpointUrl, encodedRequest);
         LOGGER.debug("Created redirect URL [{}] based on endpoint [{}]", this.redirectUrl, endpointUrl);
