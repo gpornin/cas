@@ -159,8 +159,8 @@ public class SamlIdPSingleLogoutRedirectionStrategy implements LogoutRedirection
         LOGGER.trace("Encoding logout response given endpoint [{}] for binding [{}]", location, sloService.getBinding());
         
         val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
-        val relayState = request.getParameter("RelayState");
-        val encoder = new SamlIdPHttpRedirectDeflateEncoder(location, logoutResponse, relayState);
+        val encoder = new SamlIdPHttpRedirectDeflateEncoder(location, logoutResponse);
+        encoder.setRelayState(request.getParameter("RelayState"));
         encoder.doEncode();
         val redirectUrl = encoder.getRedirectUrl();
         LOGGER.debug("Final logout redirect URL is [{}]", redirectUrl);

@@ -29,7 +29,7 @@ public class SamlIdPHttpRedirectDeflateEncoder extends HTTPRedirectDeflateEncode
 
     private final SignableXMLObject request;
 
-    private final String relayState;
+    private String relayState;
 
     private String redirectUrl;
 
@@ -63,5 +63,9 @@ public class SamlIdPHttpRedirectDeflateEncoder extends HTTPRedirectDeflateEncode
 
     @Override
     protected void doInitialize() {
+    }
+
+    public void setRelayState(String relayState) {
+    	this.relayState = relayState;
     }
 }
